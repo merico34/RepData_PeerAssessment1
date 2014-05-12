@@ -2,19 +2,106 @@
 
 
 ## Loading and preprocessing the data
+```{r echo=TRUE}
+setwd("C:/Users/HomeUser/Documents/Spécialité Data Science/Reproducible Research/repos")
 
+data <- read.csv("./activity.csv")
+data$date <- as.Date(data$date,"%Y-%m-%d")
 
-
+head(data)
+summary(data)
+```
 ## What is mean total number of steps taken per day?
+```{r echo=TRUE}
+options(scipen = 1, digits = 2) #get rid of exponential format
 
+aggdata <- tapply(data$steps,data$date, sum, na.rm = T)
+barplot(aggdata, names.arg = as.Date(names(aggdata)) 
+     , main="Histogram of the total number of steps taken per day"
+     ,ylab="Steps", xlab="Day"
+     )
 
+meansteps <- round(mean(aggdata))
+mediansteps <- round(median(aggdata))
+
+```
+Mean total number of steps taken per day: `r meansteps`.
+
+Median total number of steps taken per day: `r mediansteps`.
 
 ## What is the average daily activity pattern?
+```{r echo=TRUE}
+dailydata <- tapply(data$steps,data$interval, mean, na.rm = T)
+plot(as.numeric(names(dailydata)),dailydata
+     ,type='l'
+     ,main="Average daily activity"
+     ,xlab="5-minute interval"
+     ,ylab="average number of steps per day"
+     )
+indmaxinterv = which(dailydata == max(dailydata))
+maxinterv = names(dailydata[indmaxinterv])
 
-
+```
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps? `r maxinterv`
 
 ## Imputing missing values
+```{r echo=TRUE}
+nbna = sum(is.na(data))
+print("Total number of missing values in the dataset: ")
+print(nbna)
 
+#Strategy: Use of the mean for that 5-minute interval, calculated early in dailydata
+newdata <- data
+indexes_na <- which(is.na(data$step))
+newdata[indexes_na,]$steps <- sapply(data[indexes_na,]$interval, function(x){
+        dailydata[as.character(x)][[1]]
+})
 
+#check: first lines of newdata should contain average values corresponding to the interval considered
+head(newdata)
+dailydata[c(as.character(seq(0,25,by=5)))]
+
+#Plot histogram
+aggdata <- tapply(newdata$steps,newdata$date, sum, na.rm = T)
+barplot(aggdata, names.arg = as.Date(names(aggdata)) 
+     , main="Histogram of the total number of steps taken per day"
+     ,ylab="Steps", xlab="Day"
+     )
+
+meansteps <- round(mean(aggdata))
+mediansteps <- round(median(aggdata))
+
+```
+Mean total number of steps taken per day: `r meansteps`.
+
+Median total number of steps taken per day: `r mediansteps`.
+
+Imputing missing values raises overall number of steps!
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r echo=TRUE}
+Sys.setlocale(category = "LC_ALL", locale = "C")
+
+newdata$week <- ifelse(weekdays(newdata$date) %in% c("Sunday","Saturday"),"weekend","weekday")
+newdata$week <- factor(newdata$week)
+
+par(mfrow = c(2,1))
+
+newdailydataWE <- tapply(newdata[newdata$week == "weekend",]$steps,newdata[newdata$week == "weekend",]$interval, mean, na.rm = T)
+plot(as.numeric(names(newdailydataWE)),newdailydataWE
+     ,type='l'
+     ,main="weekend"
+     ,xlab="interval"
+     ,ylab="Number of steps"
+     )
+
+newdailydataWD <- tapply(newdata[newdata$week == "weekday",]$steps,newdata[newdata$week == "weekday",]$interval, mean, na.rm = T)
+plot(as.numeric(names(newdailydataWD)),newdailydataWD
+     ,type='l'
+     ,main="weekday"
+     ,xlab="interval"
+     ,ylab="Number of steps"
+     )
+
+Sys.setlocale(category = "LC_ALL", locale = "")
+```
